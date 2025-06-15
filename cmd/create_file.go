@@ -53,8 +53,7 @@ func createFile(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	fmt.Printf("Creating file %s ... \n", fileName)
-
+	// defer close
 	defer func(file *os.File) {
 		err := file.Close()
 		if err != nil {
@@ -63,6 +62,15 @@ func createFile(cmd *cobra.Command, args []string) {
 
 		fmt.Printf("File %s created successfully. \n", fileName)
 	}(file)
+
+	// generate file template
+	temp := generateFileTemplate(fileName)
+	if temp != "" {
+		if _, err := file.WriteString(temp); err != nil {
+			fmt.Printf("Error creating file %s ::- %v\n", fileName, err)
+			return
+		}
+	}
 }
 
 // check allowed file extensions
@@ -73,4 +81,34 @@ func isValidExtension(ext string, allowedExts []string) bool {
 		}
 	}
 	return false
+}
+
+// generate file template
+func generateFileTemplate(fileName string) string {
+	ext := filepath.Ext(fileName)
+
+	fmt.Printf("Generating file %s ... \n", fileName)
+
+	switch ext {
+	case ".go":
+		return `package main
+
+import "fmt"
+
+func main(){
+	fmt.Println("Hello world")
+}
+`
+	case ".js":
+		return `console.log("Hello world");`
+	case ".py":
+		return `print ("Hello world")`
+	case ".php":
+		return `<?php
+echo "Hello world"; 
+?> 
+`
+	default:
+		return ""
+	}
 }

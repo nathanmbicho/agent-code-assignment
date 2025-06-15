@@ -1,7 +1,7 @@
 # BUILD AND RUN CLI
 BINARY_NAME=agent-code
 
-build:
+build: clean
 	@go build -o $(BINARY_NAME) .
 
 run: build
