@@ -1,7 +1,7 @@
 package main
 
-import "fmt"
+import "github.com/nathanmbicho/agent-code-assignment/cmd"
 
 func main() {
-	fmt.Println("Hello Agent Code!")
+	cmd.Execute()
 }
