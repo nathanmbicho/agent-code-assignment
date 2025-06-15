@@ -46,10 +46,17 @@ func createFile(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	// generate directory if included in the file path
+	err := generateFileDirectory(fileName)
+	if err != nil {
+		fmt.Printf("Error creating dir %s - %v\n", fileName, err)
+		return
+	}
+
 	// create a file
 	file, err := os.Create(fileName)
 	if err != nil {
-		fmt.Printf("Error creating file %s ::- %v\n", fileName, err)
+		fmt.Printf("Error creating file %s - %v\n", fileName, err)
 		return
 	}
 
@@ -57,7 +64,7 @@ func createFile(cmd *cobra.Command, args []string) {
 	defer func(file *os.File) {
 		err := file.Close()
 		if err != nil {
-			fmt.Printf("Error closing file %s ::- %v\n", fileName, err)
+			fmt.Printf("Error closing file %s - %v\n", fileName, err)
 		}
 
 		fmt.Printf("File %s created successfully. \n", fileName)
@@ -67,7 +74,7 @@ func createFile(cmd *cobra.Command, args []string) {
 	temp := generateFileTemplate(fileName)
 	if temp != "" {
 		if _, err := file.WriteString(temp); err != nil {
-			fmt.Printf("Error creating file %s ::- %v\n", fileName, err)
+			fmt.Printf("Error creating file %s - %v\n", fileName, err)
 			return
 		}
 	}
@@ -111,4 +118,19 @@ echo "Hello world";
 	default:
 		return ""
 	}
+}
+
+// create directory
+func generateFileDirectory(fileName string) error {
+	dir := filepath.Dir(fileName)
+
+	if dir != "." && dir != "" {
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
