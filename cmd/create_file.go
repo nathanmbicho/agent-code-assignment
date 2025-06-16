@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/nathanmbicho/agent-code-assignment/pkg/components/textinput"
+	"github.com/nathanmbicho/agent-code-assignment/pkg/ui"
 	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
@@ -9,6 +12,10 @@ import (
 )
 
 var fileName string
+
+type Options struct {
+	FileName *textinput.Output
+}
 
 // createFileCmd - create a new file
 var createFileCmd = &cobra.Command{
@@ -20,64 +27,90 @@ var createFileCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(createFileCmd)
-
-	createFileCmd.Flags().StringVarP(&fileName, "file", "f", "", "The file name to create")
-	err := createFileCmd.MarkFlagRequired("file")
-	if err != nil {
-		fmt.Println("Error while marking flag as required")
-		return
-	}
 }
 
 func createFile(cmd *cobra.Command, args []string) {
-
 	allowedExtensions := []string{".go", ".js", ".py", ".php"}
-	ext := filepath.Ext(fileName)
 
-	// check if file created extention exists
-	if !isValidExtension(ext, allowedExtensions) {
-		fmt.Printf("Invalid file extension '%s'. Allowed languages are %s \n", ext, strings.Join(allowedExtensions, ","))
+	options := Options{
+		FileName: &textinput.Output{},
+	}
+
+	// handle program create, passing values
+	tProgram := tea.NewProgram(textinput.InitialTextInputModel(
+		options.FileName,
+		fmt.Sprintf("Create a new file. Allowed languages are %s", strings.Join(allowedExtensions, ",")),
+		func(input string) (bool, error) {
+			return validateFileCreate(input, allowedExtensions)
+		},
+	))
+
+	// run bubbletea program
+	if _, err := tProgram.Run(); err != nil {
+		cobra.CheckErr(err)
 		return
 	}
 
-	// check if the file exists
+	if options.FileName.Quit {
+		fmt.Println("\n ❌Create file operation cancelled.")
+	}
+
+	fileName = options.FileName.Output
+
+	if fileName != "" {
+		success := ui.RenderSuccess(fmt.Sprintf("file '%s' created successfully!", fileName))
+		fmt.Printf(success)
+	}
+}
+
+// validation
+func validateFileCreate(fileName string, allowedExtensions []string) (bool, error) {
+	// check filename if is empty
+	if strings.TrimSpace(fileName) == "" {
+		return false, fmt.Errorf("filename cannot be empty")
+	}
+
+	ext := filepath.Ext(fileName)
+
+	// check if the file extension is valid
+	if !isValidExtension(ext, allowedExtensions) {
+		return false, fmt.Errorf("invalid file extension. allowed: %s", strings.Join(allowedExtensions, ", "))
+	}
+
+	// check if the file already exists
 	if _, err := os.Stat(fileName); !os.IsNotExist(err) {
-		fmt.Printf("Oops! File '%s' already exists.\n", fileName)
-		return
+		return false, fmt.Errorf("file '%s' already exists", fileName)
 	}
 
 	// generate directory if included in the file path
-	err := generateFileDirectory(fileName)
-	if err != nil {
-		fmt.Printf("Error creating dir %s - %v\n", fileName, err)
-		return
+	if err := generateFileDirectory(fileName); err != nil {
+		return false, fmt.Errorf("error creating directory: %v", err)
 	}
 
-	// create a file
+	// create the file
 	file, err := os.Create(fileName)
 	if err != nil {
-		fmt.Printf("Error creating file %s - %v\n", fileName, err)
-		return
+		return false, fmt.Errorf("error creating file: %v", err)
 	}
 
-	// defer close
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			fmt.Printf("Error closing file %s - %v\n", fileName, err)
-		}
-
-		fmt.Printf("File %s created successfully. \n", fileName)
-	}(file)
-
-	// generate file template
+	// generate file template and write to file
 	temp := generateFileTemplate(fileName)
 	if temp != "" {
 		if _, err := file.WriteString(temp); err != nil {
-			fmt.Printf("Error creating file %s - %v\n", fileName, err)
-			return
+			err := file.Close()
+			if err != nil {
+				return false, fmt.Errorf("error closing file: %v", err)
+			}
+			return false, fmt.Errorf("error writing to file: %v", err)
 		}
 	}
+
+	// close file
+	if err := file.Close(); err != nil {
+		return false, fmt.Errorf("error closing file: %v", err)
+	}
+
+	return true, nil
 }
 
 // check allowed file extensions
@@ -94,7 +127,19 @@ func isValidExtension(ext string, allowedExts []string) bool {
 func generateFileTemplate(fileName string) string {
 	ext := filepath.Ext(fileName)
 
-	fmt.Printf("Generating file %s ... \n", fileName)
+	switch ext {
+	case ".go":
+		fmt.Printf("Generating file %s ... \n", ui.GoFileStyle.Render(fmt.Sprintf("%s", fileName)))
+	case ".js":
+
+		fmt.Printf("Generating file %s ... \n", ui.JSFileStyle.Render(fmt.Sprintf("%s", fileName)))
+	case ".py":
+
+		fmt.Printf("Generating file %s ... \n", ui.PythonFileStyle.Render(fmt.Sprintf("%s", fileName)))
+	case ".php":
+
+		fmt.Printf("Generating file %s ... \n", ui.PHPFileStyle.Render(fmt.Sprintf("%s", fileName)))
+	}
 
 	switch ext {
 	case ".go":

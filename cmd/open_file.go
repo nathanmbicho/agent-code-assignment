@@ -25,7 +25,7 @@ func init() {
 	rootCmd.AddCommand(openFileCmd)
 
 	openFileCmd.Flags().StringVarP(&openFileName, "file", "f", "", "file to be opened")
-	openFileCmd.Flags().BoolVarP(&showLineNumbers, "line-numbers", "ln", false, "show line numbers - default: false")
+	openFileCmd.Flags().BoolVarP(&showLineNumbers, "line-numbers", "l", false, "show line numbers - default: false")
 
 	err := openFileCmd.MarkFlagRequired("file")
 	if err != nil {
