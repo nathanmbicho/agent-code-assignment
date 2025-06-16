@@ -3,9 +3,13 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/nathanmbicho/agent-code-assignment/pkg/components/textinput"
+	"github.com/nathanmbicho/agent-code-assignment/pkg/ui"
 	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 var (
@@ -23,36 +27,30 @@ var openFileCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(openFileCmd)
-
-	openFileCmd.Flags().StringVarP(&openFileName, "file", "f", "", "file to be opened")
-	openFileCmd.Flags().BoolVarP(&showLineNumbers, "line-numbers", "l", false, "show line numbers - default: false")
-
-	err := openFileCmd.MarkFlagRequired("file")
-	if err != nil {
-		fmt.Println("error while marking flag as required")
-		return
-	}
 }
 
 func openFile(cmd *cobra.Command, args []string) {
-	//check if the file exists
-	if _, err := os.Stat(openFileName); os.IsNotExist(err) {
-		fmt.Printf("error - file %s does not exist. incorrect path or file name \n", openFileName)
+	options := Options{
+		FileName: &textinput.Output{},
+	}
+
+	// handle program create, passing values
+	tProgram := tea.NewProgram(textinput.InitialTextInputModel(
+		options.FileName,
+		"Enter file name to open ...",
+		func(input string) (bool, error) {
+			return validateFileOpen(input)
+		},
+	))
+
+	// run bubbletea program
+	if _, err := tProgram.Run(); err != nil {
+		cobra.CheckErr(err)
 		return
 	}
 
-	// get the file path
-	path, err := filepath.Abs(openFileName)
-	if err != nil {
-		fmt.Printf("error - error getting path %s\n", openFileName)
-		return
-	}
-
-	// display file data
-	err = displayFileContents(openFileName, path)
-	if err != nil {
-		fmt.Printf("error opening file %s - %v\n", path, err)
-		return
+	if options.FileName.Quit {
+		fmt.Println("\n ❌Open file operation cancelled.")
 	}
 }
 
@@ -72,24 +70,14 @@ func displayFileContents(fileName, absolutePath string) error {
 		}
 	}(file)
 
-	fmt.Printf("\n")
-	fmt.Printf("File : %s\n", absolutePath)
-	fmt.Printf("\n")
+	fmt.Printf("\nFile : %s\n\n", absolutePath)
 
-	// scan read and display file content
 	scanner := bufio.NewScanner(file)
 	lineNumber := 1
 
 	for scanner.Scan() {
 		line := scanner.Text()
-
-		// check if show line numbers
-		if showLineNumbers {
-			fmt.Printf("%4d | %s\n", lineNumber, line)
-		} else {
-			fmt.Printf("%s\n", line)
-		}
-
+		fmt.Println(ui.RenderCode(fmt.Sprintf("%4d | %s", lineNumber, line)))
 		lineNumber++
 	}
 
@@ -97,7 +85,32 @@ func displayFileContents(fileName, absolutePath string) error {
 		return err
 	}
 
-	fmt.Printf("\n\n")
-
 	return nil
+}
+
+// validate file path input value
+func validateFileOpen(fileName string) (bool, error) {
+	// check filename if is empty
+	if strings.TrimSpace(fileName) == "" {
+		return false, fmt.Errorf("filename cannot be empty")
+	}
+
+	//check if the file exists
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		return false, fmt.Errorf("file %s does not exist. incorrect path or file name \n", fileName)
+	}
+
+	// get the file path
+	path, err := filepath.Abs(fileName)
+	if err != nil {
+		return false, fmt.Errorf("error getting absolute path %s\n", path)
+	}
+
+	// display file data
+	err = displayFileContents(fileName, path)
+	if err != nil {
+		return false, fmt.Errorf("error opening file %s - %v\n", path, err)
+	}
+
+	return true, nil
 }
