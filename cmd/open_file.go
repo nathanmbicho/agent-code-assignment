@@ -1,14 +1,17 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/spf13/cobra"
 	"os"
-	"os/exec"
 	"path/filepath"
 )
 
-var openFileName string
+var (
+	openFileName    string
+	showLineNumbers bool
+)
 
 // openFileCmd - one file
 var openFileCmd = &cobra.Command{
@@ -22,6 +25,8 @@ func init() {
 	rootCmd.AddCommand(openFileCmd)
 
 	openFileCmd.Flags().StringVarP(&openFileName, "file", "f", "", "file to be opened")
+	openFileCmd.Flags().BoolVarP(&showLineNumbers, "line-numbers", "ln", false, "show line numbers - default: false")
+
 	err := openFileCmd.MarkFlagRequired("file")
 	if err != nil {
 		fmt.Println("error while marking flag as required")
@@ -43,11 +48,56 @@ func openFile(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	fmt.Printf("opening file %s... \n", openFileName)
-
-	err = exec.Command("open", path).Start()
+	// display file data
+	err = displayFileContents(openFileName, path)
 	if err != nil {
 		fmt.Printf("error opening file %s - %v\n", path, err)
 		return
 	}
+}
+
+// display file content in the cli
+func displayFileContents(fileName, absolutePath string) error {
+	// open file
+	file, err := os.Open(fileName)
+	if err != nil {
+		return err
+	}
+
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			fmt.Printf("error closing file %s - %v\n", fileName, err)
+			return
+		}
+	}(file)
+
+	fmt.Printf("\n")
+	fmt.Printf("File : %s\n", absolutePath)
+	fmt.Printf("\n")
+
+	// scan read and display file content
+	scanner := bufio.NewScanner(file)
+	lineNumber := 1
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// check if show line numbers
+		if showLineNumbers {
+			fmt.Printf("%4d | %s\n", lineNumber, line)
+		} else {
+			fmt.Printf("%s\n", line)
+		}
+
+		lineNumber++
+	}
+
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	fmt.Printf("\n\n")
+
+	return nil
 }
