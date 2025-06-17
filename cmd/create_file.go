@@ -63,56 +63,6 @@ func createFile(cmd *cobra.Command, args []string) {
 	}
 }
 
-// validation
-func validateFileCreate(fileName string, allowedExtensions []string) (bool, error) {
-	// check filename if is empty
-	if strings.TrimSpace(fileName) == "" {
-		return false, fmt.Errorf("filename cannot be empty")
-	}
-
-	ext := filepath.Ext(fileName)
-
-	// check if the file extension is valid
-	if !isValidExtension(ext, allowedExtensions) {
-		return false, fmt.Errorf("invalid file extension. allowed: %s", strings.Join(allowedExtensions, ", "))
-	}
-
-	// check if the file already exists
-	if _, err := os.Stat(fileName); !os.IsNotExist(err) {
-		return false, fmt.Errorf("file '%s' already exists", fileName)
-	}
-
-	// generate directory if included in the file path
-	if err := generateFileDirectory(fileName); err != nil {
-		return false, fmt.Errorf("error creating directory: %v", err)
-	}
-
-	// create the file
-	file, err := os.Create(fileName)
-	if err != nil {
-		return false, fmt.Errorf("error creating file: %v", err)
-	}
-
-	// generate file template and write to file
-	temp := generateFileTemplate(fileName)
-	if temp != "" {
-		if _, err := file.WriteString(temp); err != nil {
-			err := file.Close()
-			if err != nil {
-				return false, fmt.Errorf("error closing file: %v", err)
-			}
-			return false, fmt.Errorf("error writing to file: %v", err)
-		}
-	}
-
-	// close file
-	if err := file.Close(); err != nil {
-		return false, fmt.Errorf("error closing file: %v", err)
-	}
-
-	return true, nil
-}
-
 // check allowed file extensions
 func isValidExtension(ext string, allowedExts []string) bool {
 	for _, allowedExt := range allowedExts {

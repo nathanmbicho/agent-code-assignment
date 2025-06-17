@@ -8,8 +8,6 @@ import (
 	"github.com/nathanmbicho/agent-code-assignment/pkg/components/textinput"
 	"github.com/spf13/cobra"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 )
 
@@ -126,60 +124,4 @@ func displayFileContents(fileName string) (string, error) {
 	}
 
 	return strings.Join(list, "\n"), nil
-}
-
-// validateSearchFile - validate file path input value
-func validateSearchFile(fileName string) (bool, error) {
-	// check filename if is empty
-	if strings.TrimSpace(fileName) == "" {
-		return false, fmt.Errorf("filename cannot be empty")
-	}
-
-	//check if the file exists
-	if _, err := os.Stat(fileName); os.IsNotExist(err) {
-		return false, fmt.Errorf("file %s does not exist. incorrect path or file name \n", fileName)
-	}
-
-	// get the file path
-	path, err := filepath.Abs(fileName)
-	if err != nil {
-		return false, fmt.Errorf("error getting absolute path %s\n", path)
-	}
-
-	return true, nil
-}
-
-// validateOpenFile - validate open file
-func validateOpenFile(fileName, editor string) (string, bool, error) {
-	var cmd *exec.Cmd
-
-	if strings.TrimSpace(fileName) == "" {
-		return "", false, fmt.Errorf("filename cannot be empty")
-	}
-
-	if strings.TrimSpace(editor) == "" {
-		return "", false, fmt.Errorf("error reading open file %s\n", fileName)
-	}
-
-	// get the file path
-	path, err := filepath.Abs(fileName)
-	if err != nil {
-		return "", false, fmt.Errorf("error getting absolute path %s\n", path)
-	}
-
-	switch strings.ToLower(editor) {
-	case "code":
-		cmd = exec.Command("code", path)
-		return "", true, cmd.Start()
-	case "vim":
-		cmd = exec.Command("vim", path)
-		return "", true, cmd.Start()
-	default:
-		// display file data
-		code, err := displayFileContents(fileName)
-		if err != nil {
-			return "", false, fmt.Errorf("error opening file %s - %v\n", path, err)
-		}
-		return code, true, nil
-	}
 }
