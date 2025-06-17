@@ -101,9 +101,6 @@ func validateOpenFile(fileName, editor string) (string, bool, error) {
 	case "code":
 		cmd = exec.Command("code", path)
 		return "", true, cmd.Start()
-	case "vim":
-		cmd = exec.Command("vim", path)
-		return "", true, cmd.Start()
 	default:
 		// display file data
 		code, err := displayFileContents(fileName)
