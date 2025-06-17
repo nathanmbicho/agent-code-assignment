@@ -13,7 +13,7 @@ import (
 
 var fileName string
 
-type Options struct {
+type CreateOptions struct {
 	FileName *textinput.Output
 }
 
@@ -32,7 +32,7 @@ func init() {
 func createFile(cmd *cobra.Command, args []string) {
 	allowedExtensions := []string{".go", ".js", ".py", ".php"}
 
-	options := Options{
+	options := CreateOptions{
 		FileName: &textinput.Output{},
 	}
 

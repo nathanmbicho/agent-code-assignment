@@ -15,6 +15,9 @@ const (
 	InfoColor    = "214" // Orange
 )
 
+var TextStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color(TextColor))
+
 // ErrorStyle - error message style - bright red with bold
 var ErrorStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color(ErrorColor)).
@@ -26,6 +29,10 @@ var SuccessStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color(SuccessColor)).
 	Bold(true).
 	Margin(1, 0)
+
+// SuccessStyle2 - success message style - green with bold
+var SuccessStyle2 = lipgloss.NewStyle().
+	Foreground(lipgloss.Color(SuccessColor)).Bold(true)
 
 // HeaderStyle - blue with underline and padding
 var HeaderStyle = lipgloss.NewStyle().
@@ -68,6 +75,7 @@ var CLIStyle = lipgloss.NewStyle().
 var InputStyle = lipgloss.NewStyle().
 	Border(lipgloss.RoundedBorder()).
 	BorderForeground(lipgloss.Color("62")).
+	Foreground(lipgloss.Color(TextColor)).
 	Padding(0, 1).
 	Width(60)
 

@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/nathanmbicho/agent-code-assignment/pkg/components/listinput"
 	"github.com/nathanmbicho/agent-code-assignment/pkg/components/textinput"
-	"github.com/nathanmbicho/agent-code-assignment/pkg/ui"
 	"github.com/spf13/cobra"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -16,6 +17,14 @@ var (
 	openFileName    string
 	showLineNumbers bool
 )
+
+type InputOptions struct {
+	FileName *textinput.Output
+}
+
+type ListOptions struct {
+	ListOptions *listinput.Selection
+}
 
 // openFileCmd - one file
 var openFileCmd = &cobra.Command{
@@ -30,16 +39,17 @@ func init() {
 }
 
 func openFile(cmd *cobra.Command, args []string) {
-	options := Options{
+	//input command
+	inputOptions := InputOptions{
 		FileName: &textinput.Output{},
 	}
 
 	// handle program create, passing values
 	tProgram := tea.NewProgram(textinput.InitialTextInputModel(
-		options.FileName,
+		inputOptions.FileName,
 		"Enter file name to open ...",
 		func(input string) (bool, error) {
-			return validateFileOpen(input)
+			return validateSearchFile(input)
 		},
 	))
 
@@ -49,17 +59,46 @@ func openFile(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	if options.FileName.Quit {
+	if inputOptions.FileName.Quit {
 		fmt.Println("\n ❌Open file operation cancelled.")
+	}
+
+	// list command
+	listOptions := ListOptions{
+		ListOptions: &listinput.Selection{},
+	}
+
+	listOfOpenFileTools := []string{
+		"Default",
+		"Code",
+	}
+
+	tProgram = tea.NewProgram(listinput.InitialListInputModel(
+		listOfOpenFileTools,
+		inputOptions.FileName.Output,
+		listOptions.ListOptions,
+		"Select a tool to open with...",
+		func(path, choice string) (string, bool, error) {
+			return validateOpenFile(path, choice)
+		},
+	))
+
+	if _, err := tProgram.Run(); err != nil {
+		cobra.CheckErr(err)
+		return
+	}
+
+	if listOptions.ListOptions.Quit {
+		fmt.Println("\n ❌Create file operation cancelled.")
 	}
 }
 
 // display file content in the cli
-func displayFileContents(fileName, absolutePath string) error {
+func displayFileContents(fileName string) (string, error) {
 	// open file
 	file, err := os.Open(fileName)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	defer func(file *os.File) {
@@ -70,26 +109,27 @@ func displayFileContents(fileName, absolutePath string) error {
 		}
 	}(file)
 
-	fmt.Printf("\nFile : %s\n\n", absolutePath)
-
 	scanner := bufio.NewScanner(file)
 	lineNumber := 1
 
+	var list []string
 	for scanner.Scan() {
 		line := scanner.Text()
-		fmt.Println(ui.RenderCode(fmt.Sprintf("%4d | %s", lineNumber, line)))
+		text := fmt.Sprintf(fmt.Sprintf("%4d | %s", lineNumber, line))
 		lineNumber++
+
+		list = append(list, text)
 	}
 
 	if err := scanner.Err(); err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return strings.Join(list, "\n"), nil
 }
 
-// validate file path input value
-func validateFileOpen(fileName string) (bool, error) {
+// validateSearchFile - validate file path input value
+func validateSearchFile(fileName string) (bool, error) {
 	// check filename if is empty
 	if strings.TrimSpace(fileName) == "" {
 		return false, fmt.Errorf("filename cannot be empty")
@@ -106,11 +146,40 @@ func validateFileOpen(fileName string) (bool, error) {
 		return false, fmt.Errorf("error getting absolute path %s\n", path)
 	}
 
-	// display file data
-	err = displayFileContents(fileName, path)
-	if err != nil {
-		return false, fmt.Errorf("error opening file %s - %v\n", path, err)
+	return true, nil
+}
+
+// validateOpenFile - validate open file
+func validateOpenFile(fileName, editor string) (string, bool, error) {
+	var cmd *exec.Cmd
+
+	if strings.TrimSpace(fileName) == "" {
+		return "", false, fmt.Errorf("filename cannot be empty")
 	}
 
-	return true, nil
+	if strings.TrimSpace(editor) == "" {
+		return "", false, fmt.Errorf("error reading open file %s\n", fileName)
+	}
+
+	// get the file path
+	path, err := filepath.Abs(fileName)
+	if err != nil {
+		return "", false, fmt.Errorf("error getting absolute path %s\n", path)
+	}
+
+	switch strings.ToLower(editor) {
+	case "code":
+		cmd = exec.Command("code", path)
+		return "", true, cmd.Start()
+	case "vim":
+		cmd = exec.Command("vim", path)
+		return "", true, cmd.Start()
+	default:
+		// display file data
+		code, err := displayFileContents(fileName)
+		if err != nil {
+			return "", false, fmt.Errorf("error opening file %s - %v\n", path, err)
+		}
+		return code, true, nil
+	}
 }

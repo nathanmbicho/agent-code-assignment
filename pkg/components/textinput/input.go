@@ -78,7 +78,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			m.err = err
-			m.textInput.SetValue("")
 			return m, nil
 
 		case tea.KeyCtrlC, tea.KeyEsc:
@@ -96,15 +95,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) View() string {
 	view := fmt.Sprintf(
-		"%s\n\n%s\n\n%s",
+		"%s\n%s",
 		m.header,
 		ui.InputStyle.Render(m.textInput.View()),
-		ui.RenderInfo("(press enter to confirm, esc/ctrl+c to quit)"),
-	) + "\n\n"
+	) + "\n"
 
 	if m.err != nil {
-		view += ui.RenderError(fmt.Sprintf("%s\n Please try again!", m.err.Error()))
+		view += ui.RenderError(fmt.Sprintf("%s Please try again!", m.err.Error()))
 	}
 
-	return view + "\n\n"
+	view += fmt.Sprintf("\n%s", ui.RenderInfo("(press enter to continue, esc/ctrl+c to quit)"))
+
+	return view
 }
