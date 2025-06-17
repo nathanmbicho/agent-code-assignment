@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/nathanmbicho/agent-code-assignment/pkg/ui"
 	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
@@ -30,6 +31,8 @@ func init() {
 }
 
 func readDirectory(cmd *cobra.Command, args []string) {
+	fmt.Printf("\n")
+
 	// check if the path exists
 	fileInfo, err := os.Stat(dirPath)
 	if os.IsNotExist(err) {
@@ -49,7 +52,7 @@ func readDirectory(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	fmt.Printf("absolute path %s\n", path)
+	fmt.Printf("absolute path %s\n", ui.RenderSuccess(path))
 
 	// print directory details
 	err = printDirectory(path, "")
@@ -106,7 +109,7 @@ func printDirectory(dirPath, prefix string) error {
 		if entry.IsDir() {
 			name += "/"
 		}
-		fmt.Printf("%s%s%s\n", prefix, connector, name)
+		fmt.Printf("%s%s%s\n", prefix, ui.InfoStyle.Render(connector), ui.TextStyle.Render(name))
 
 		// recursively print subdirectories
 		if entry.IsDir() {
